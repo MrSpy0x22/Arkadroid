@@ -125,19 +125,25 @@ public class UIManager : MonoBehaviour
     public void UpdateLevelCounter()
     {
         // Update text
-        LevelCount.text = string.Format("{0:D2}/{1:D2}" , GameManager.Instance._currentLevel ,
+        LevelCount.text = string.Format("{0:D2}/{1:D2}" , GameManager.Instance._currentLevel + 1 ,
             BlocksManager.Instance.LevelBlocksCount);
     }
 
+    /// <summary>
+    ///     Saving new record via <c>PlayManager</c>.
+    /// </summary>
     public void AddNewRecord()
     {
         Record rec = new Record();
-        rec.Name = InputUserName.text;
+        rec.Name = InputUserName.text.Length < 1 ? "unknown" : InputUserName.text;
         rec.Scores = GameManager.Instance._gameScores;
         rec.Timestamp = new DateTime(1970, 1, 1).Ticks;
         GameManager.Instance.AddRecord(rec , true);
     }
 
+    /// <summary>
+    ///     Enable menu game scene.
+    /// </summary>
     public void GoToMenu()
     {
         SceneManager.LoadScene(0);

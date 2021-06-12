@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -35,6 +36,7 @@ public class GameManager : MonoBehaviour
     public int _currentLevel = 0;
     public byte _playerLives;
     public int _gameScores;
+    public static TextAsset RecordsFile;
 
     public List<Record> Records;
 
@@ -70,7 +72,7 @@ public class GameManager : MonoBehaviour
         _playerLives = INITIAL_LIVES;
         _gameScores = 0;
 
-        _gameTextMessage.text = STATE_STOPPED_TEXT;
+        SetState(GameState.GS_STOPPED);
 
         Ball.OnBallDie += OnBallDie;
         Block.OnBlockDestroy += this.OnBlockDestroy;
@@ -86,6 +88,26 @@ public class GameManager : MonoBehaviour
     {
         Ball.OnBallDie -= OnBallDie;
         Block.OnBlockDestroy -= this.OnBlockDestroy;
+    }
+
+    private void Update()
+    {
+        if (Application.platform == RuntimePlatform.Android)
+        {
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                SceneManager.LoadScene(0);
+            }
+        }
+    }
+
+    public static string GetAppDataPath()
+    {
+        #if UNITY_ANDROID && !UNITY_EDITOR
+            return "/storage/emulated/0/Arkadroid_Data";
+        #else
+            return Application.persistentDataPath + "/Data";
+        #endif
     }
 
     /// <summary>
@@ -122,7 +144,6 @@ public class GameManager : MonoBehaviour
             {
                 BallsManager.Instance.ResetBalls();
                 _gameStateFlag = GameState.GS_STOPPED;
-                //BlocksManager.Instance.LoadLevel(_currentLevel);
             }
         }
     }
@@ -161,12 +182,12 @@ public class GameManager : MonoBehaviour
         if (isWinner)
         {
             EndScreen.GetComponent<Image>().color = new Color32(0 , 184 , 64 , 255);
-            _panel_text[0].text = string.Format("{0}\n{1} pkt" , GAMEEND_VICTORY_TEXT , 0);
+            _panel_text[0].text = string.Format("{0}\n{1} pkt" , GAMEEND_VICTORY_TEXT , this._gameScores);
         }
         else
         {
             EndScreen.GetComponent<Image>().color = new Color32(219 , 54 , 49 , 255);
-            _panel_text[0].text = string.Format("{0}\n{1} pkt", GAMEEND_DEATH_TEXT, 0);
+            _panel_text[0].text = string.Format("{0}\n{1} pkt", GAMEEND_DEATH_TEXT, this._gameScores);
         }
 
         EndScreen.SetActive(true);
@@ -175,12 +196,19 @@ public class GameManager : MonoBehaviour
     public void AddRecord(Record record, bool save)
     {
         Records.Add(record);
-        SaveStats();
+
+        if (save)
+        {
+            SaveStats(Records);
+        }
     }
     public static List<Record> LoadRecords()
     {
-        TextAsset file = Resources.Load("records") as TextAsset;
-        string[] lines = file.text.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+        //TextAsset file = Resources.Load("records") as TextAsset;
+        string file_name = GetAppDataPath() + "/records.txt";
+
+        var lines = File.ReadAllLines(file_name);
+        //string[] lines = file.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
         List<Record> result = new List<Record>();
 
         for (int i = 0; i < lines.Length; i++)
@@ -195,29 +223,29 @@ public class GameManager : MonoBehaviour
             result.Add(tmp_record);
         }
 
-        return result;
+        return result == null ? result : result.OrderByDescending(r => r.Scores).ToList();
     }
 
-    public void SaveStats()
+    public static void SaveStats(List<Record> records)
     {
-        string file_name = Application.dataPath + "/Resources/records.txt";
-        if (File.Exists(file_name))
+        string file_name = GetAppDataPath() + "/records.txt";
+
+        if (!File.Exists(file_name))
         {
-            File.Delete(file_name);
+            File.Create(file_name);
         }
 
-        var file = File.CreateText(file_name);
+         if (records.Count > STATS_LIMIT)
+         {
+            records = records.OrderByDescending(r => r.Scores).ToList().GetRange(0, 5);
+         }
 
-        if (Records.Count > STATS_LIMIT)
-        {
-            Records = Records.OrderByDescending(r => r.Scores).ToList().GetRange(0, 5);
-        }
+         string lines = "";
+         foreach (Record r in records)
+         {
+             lines += r.ToString() + "\n";
+         }
 
-        foreach (Record r in Records)
-        {
-            file.WriteLine(r.ToString());
-        }
-
-        file.Close();
+         File.WriteAllText(file_name , lines);
     }
 }

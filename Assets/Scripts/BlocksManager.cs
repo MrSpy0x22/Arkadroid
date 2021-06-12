@@ -73,7 +73,7 @@ public class BlocksManager : MonoBehaviour
     /// <seealso cref="RenderBlocks"/>
     public void LoadLevel(int level)
     {
-        // Updating level number in GameManager
+        // Updating level number in PlayManager
         GameManager.Instance._currentLevel = level;
         
         // Recreating blocks area
@@ -133,7 +133,7 @@ public class BlocksManager : MonoBehaviour
 
     private void RemoveExistingBlocks()
     {
-        foreach (var block in BlocksManager.Instance.LevelBlocks.ToList())
+        foreach (var block in LevelBlocks.ToList())
         {
             Destroy(block);
         }
